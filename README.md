@@ -2,8 +2,6 @@
 
 A novel vulnerability detection framework with two components: (1) hyper code property graph (HCPG) construction, which reduces redundancy through semantics-preserving graph pruning and hyperedge creation; and (2) the type-aware flow-sensitive hypergraph convolutional network (TAF-HGCN), which combines node type-aware embeddings with flow-sensitive hyperedge learning to model high-order semantic relationships.
 
-![GitHub Logo](https://github.com/DataAvailable/SP4CPG/blob/main/figures/framework.png)
-
 ## 🚀 Features
 
 - **Hyper Code Property Graph Generation**: Automated HCPG generation
