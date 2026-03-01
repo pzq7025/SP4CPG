@@ -1,21 +1,35 @@
 import os
 import json
 import shutil
+import argparse
 import subprocess
 from pathlib import Path
 
+# ========== 参数设置 ==========
+parser = argparse.ArgumentParser()
+parser.add_argument("--dataset", default='PrimeVul.json', type=str, help="dataset name")
+parser.add_argument("--workers", default=max(1, (os.cpu_count() or 2) // 2), type=int,
+                    help="parallel workers (joern is heavy; start with 2~4)")
+args = parser.parse_args()
+
 # 路径配置
-json_file = "../data/function.json"  # 原始数据集文件路径
-dot_output_dir = Path("dots")
+dataset_file = f"../data/{args.dataset}"  # 原始数据集文件路径
+source_dir = Path("source")  # 提取的 C 源代码文件夹
+dot_output_dir = Path("dots-cpg")
 joern_workspace = Path("workspace")
 
+
 # 创建目录
+source_dir.mkdir(parents=True, exist_ok=True)
 dot_output_dir.mkdir(parents=True, exist_ok=True)
 joern_workspace.mkdir(parents=True, exist_ok=True)
 
 # 读取 JSON 文件
-with open(json_file, "r", encoding="utf-8") as f:
-    data = json.load(f)
+with open(dataset_file, "r", encoding="utf-8") as f:
+    if args.dataset == 'PrimeVul.json':
+        data = [json.loads(line) for line in f if line.strip()]
+    elif args.dataset == 'FFmpeg_Qemu.json':
+        data = json.load(f)
 
 for idx, item in enumerate(data):
     code = item["func"]

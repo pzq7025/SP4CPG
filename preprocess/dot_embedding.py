@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 class HCPGDataset(Dataset):
     def __init__(self, transform=None):
         super().__init__(transform)
-        self.dot_dir = os.path.join("dots-cpg")
+        self.dot_dir = os.path.join("dots-hcpg")
         
         # 检查目录是否存在
         if not os.path.exists(self.dot_dir):

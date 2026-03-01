@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 # from preprocess.graph_dataset import CPGDataset
 from models.gnn_models import GCN, GAT, GIN, GraphSAGE, GGNN  # 可替换为 GAT, GIN 等
-from models.hgnn_models import HGCN  # 如果需要使用HGNN模型
+from models.hgcn_models import HGCN  # 如果需要使用HGNN模型
 from tabulate import tabulate
 
 
@@ -87,30 +87,22 @@ print(f"\nParams Details: Model={args.model}, Batchsize={args.batch}, Learning_R
 # ========== 训练函数 ==========
 def train(model, train_batch, optimizer, epoch):
     model.train()
-    correct = 0
-    total_loss = 0
-    total_samples = 0
-    # print(len(loader))
-    # for data in tqdm.tqdm(loader, desc=f"Epoch {epoch:03d}/{args.epoch} - Training", leave=False, ncols=80):
-    # for data in loader:
     data = train_batch.to(device)
     optimizer.zero_grad()
     out = model(data)
-    
-    # 确保标签维度正确
-    target = data.y.view(-1)  # 展平标签
-    
-    pred = out.argmax(dim=1)
-    correct += int((pred == target).sum())
-    total_samples += target.size(0)
-    
-    loss = F.nll_loss(out, target)
+
+    target = data.y.view(-1).long()
+    loss = F.cross_entropy(out, target)
     loss.backward()
     optimizer.step()
-    total_loss += loss.item()
-        
-    # return correct / total_samples, total_loss / len(loader)
-    return correct, total_loss
+
+    pred = out.argmax(dim=1)
+    correct = int((pred == target).sum().item())
+    bs = target.size(0)
+
+    # 把 mean loss 还原成 sum loss，方便 epoch 级别正确平均
+    return correct, loss.item() * bs, bs
+
 
 # ========== 验证函数 ==========
 def evaluate(model, val_batch, epoch):
@@ -172,7 +164,7 @@ def evaluate_metrics(model, loader):
 
 # ========== 加载数据集 ==========
 # dataset = CPGDataset(root="preprocess")
-dataset = torch.load('./preprocess/pruned_cpg_dataset.pkl', weights_only=False)
+dataset = torch.load('./preprocess/hcpg_dataset.pkl', weights_only=False)
 train_len = int(0.8 * len(dataset))
 val_len = int(0.1 * len(dataset))
 test_len = len(dataset) - train_len - val_len
@@ -225,19 +217,21 @@ for epoch in range(args.epoch):
     epoch_start = time.time()   # 记录每个epoch开始时间
     # ------训练开始（Training Start）------
     train_correct = 0
-    loss = 0
-    train_bar = tqdm(train_loader, total=train_len // args.batch, desc=f"Epoch {epoch+1}/{args.epoch} - Training", ncols=80, leave=False)
+    loss_sum = 0
+    train_samples = 0
+    train_bar = tqdm(train_loader, total=len(train_loader), desc=f"Epoch {epoch+1}/{args.epoch} - Training", ncols=80, leave=False)
     for idx, batch in enumerate(train_bar, start=1):    # 以batch为单位进行训练
-        idx_correct, idx_loss = train(model, batch, optimizer, epoch)
+        idx_correct, idx_loss, bs = train(model, batch, optimizer, epoch)
         train_correct += idx_correct
-        loss += idx_loss
-    train_acc = train_correct / train_len # 计算每个batch的准确率
-    train_loss = loss / train_len   # 计算每个batch的平均损失
+        loss_sum += idx_loss
+        train_samples += bs
+    train_acc = train_correct / train_samples # 计算每个batch的准确率
+    train_loss = loss_sum / train_samples   # 计算每个batch的平均损失
     # ------训练结束（Training End）------
 
     # ------验证开始（Validation Start）------
     val_correct = 0
-    val_bar = tqdm(val_loader, total=val_len, desc=f"Epoch {epoch+1}/{args.epoch} - Validation", ncols=80, leave=False)
+    val_bar = tqdm(val_loader, total=len(val_loader), desc=f"Epoch {epoch+1}/{args.epoch} - Validation", ncols=80, leave=False)
     for idx, batch in enumerate(val_bar, start=1):  # 以batch为单位进行验证
         idx_correct = evaluate(model, batch, epoch)
         val_correct += idx_correct

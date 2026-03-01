@@ -164,6 +164,8 @@ def remove_immediate_assignment_and_print_nodes(graph: pydot.Dot) -> pydot.Dot:
             # 如果父子节点中都包含该节点，则删除该节点
             if len(parent_nodes) > 0 and len(child_nodes) > 0:
                 for parent in parent_nodes:
+                    if parent is None:
+                        continue
                     parent_node = graph.get_node(parent)[0]  # 获取父节点对象
                     # print(f"Parent node: {parent_node}")
                     if str(parent_node.get_label()).split(",")[0].strip('<').startswith("BLOCK"):   # 判断父节点类型是否为 BLOCK
