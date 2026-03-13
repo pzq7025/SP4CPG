@@ -163,7 +163,8 @@ def evaluate_metrics(model, loader):
 
 
 # ========== 加载数据集 ==========
-# dataset = CPGDataset(root="preprocess")
+torch.manual_seed(2025)
+torch.cuda.manual_seed(2025)
 dataset = torch.load('./preprocess/hcpg_dataset.pkl', weights_only=False)
 train_len = int(0.8 * len(dataset))
 val_len = int(0.1 * len(dataset))
